@@ -114,7 +114,7 @@ public class Client {
 			for (int j = 0; j < file.length; j++) {
 				if (messages.isEmpty() || k == MAX_BUFFER_SIZE) {
 					if ((file.length - j) < MAX_BUFFER_SIZE) {
-						messages.add(new byte[file.length - j]);
+						messages.add(new byte[file.length - j + 1]);
 					}
 					else {
 						messages.add(new byte[MAX_BUFFER_SIZE]);

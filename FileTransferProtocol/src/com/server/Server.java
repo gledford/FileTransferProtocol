@@ -122,12 +122,31 @@ public class Server {
 
 				if (Arrays.equals(endPacket, receivedMessages.get(currentIndex))) {
 					receivedMessages.remove(currentIndex);
-					System.out.println("EOF");
 					endOfTransmission = true;
 				}
 				else {
-					byte[] sendData = packet.toUpperCase().getBytes();
+					byte[] sendData = receivedMessages.get(currentIndex);
+					if (sendData[sendData.length - 1] == 0) {
+						int eofIndex = -1;
+						System.out.println(Byte.MIN_VALUE);
+						for (int q = 0; q < sendData.length; q++) {
+							if (sendData[q] == Byte.MIN_VALUE) {
+								eofIndex = q;
+								break;
+							}
+						}
+						if (eofIndex != -1) {
+							byte[] newSendData = new byte[eofIndex];
+							for (int r = 0; r < eofIndex; r++) {
+								newSendData[r] = sendData[r];
+							}
+							sendData = newSendData;
+						}
+					}
 	
+					String str = new String(sendData, "UTF-8");
+					sendData = str.toUpperCase().getBytes();
+					
 					// Ack
 					DatagramPacket sendPacket = new DatagramPacket(sendData,
 							sendData.length, receivePacket.getAddress(),
@@ -145,16 +164,14 @@ public class Server {
 			for (int index = 0; index < receivedMessages.size(); index++) {
 				// Remove extra bytes from last message
 				if (index == receivedMessages.size() - 1) {
-					System.out.println("Looking at last packet");
 					int indexOfEndOfFile = -1;
 					for (int index2 = 0; index2 < receivedMessages.get(index).length; index2++) {
 						if (receivedMessages.get(index)[index2] == Byte.MIN_VALUE) {
 							indexOfEndOfFile = index2;
-							System.out.println("Index of end of file found");
 						}
 					}
 					if (indexOfEndOfFile != -1) {
-						byte [] lastPacket = new byte[indexOfEndOfFile + 1];
+						byte [] lastPacket = new byte[indexOfEndOfFile];
 						for (int index3 = 0; index3 < indexOfEndOfFile; index3++) {
 							lastPacket[index3] = receivedMessages.get(index)[index3];
 						}
