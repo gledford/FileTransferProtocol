@@ -113,7 +113,12 @@ public class Client {
 			int k = 0;
 			for (int j = 0; j < file.length; j++) {
 				if (messages.isEmpty() || k == MAX_BUFFER_SIZE) {
-					messages.add(new byte[MAX_BUFFER_SIZE]);
+					if ((file.length - j) < MAX_BUFFER_SIZE) {
+						messages.add(new byte[file.length - j]);
+					}
+					else {
+						messages.add(new byte[MAX_BUFFER_SIZE]);
+					}
 					if (k == MAX_BUFFER_SIZE)
 						currentIndex++;
 					k = 0;
@@ -121,23 +126,31 @@ public class Client {
 				messages.get(currentIndex)[k] = file[j];
 				k++;
 			}
+			
+			if (messages.get(messages.size() - 1).length != MAX_BUFFER_SIZE) {
+				messages.get(messages.size() - 1)[messages.get(messages.size() - 1).length - 1] = Byte.MIN_VALUE;
+			}
+			
 
 			// Send each packet and wait for the reply before sending the next packet
 			int currentAckIndex = 0;
 			for (int messageId = 0; messageId < messages.size(); messageId++) {
+				// Send packet to Server
 				DatagramPacket sendPacket = new DatagramPacket(
 						messages.get(messageId),
 						messages.get(messageId).length, IPAddress, portNumber);
 
 				clientSocket.send(sendPacket);
-				acks.add(new byte[MAX_BUFFER_SIZE]);
+				acks.add(new byte[messages.get(messageId).length]);
+				
+				// Wait for ACK from Server
 				DatagramPacket receivePacket = new DatagramPacket(
 						acks.get(currentAckIndex),
 						acks.get(currentAckIndex).length);
 				clientSocket.receive(receivePacket);
+				
 				String sentence = new String(acks.get(currentAckIndex));
 				sentence = sentence.replace("\n", "").replace("\r", "");
-
 				System.out.println(sentence);
 				currentAckIndex++;
 			}
@@ -145,7 +158,7 @@ public class Client {
 			// Send the end packet to terminate transmission
 			byte[] endPacketData = new byte[MAX_BUFFER_SIZE];
 			for(int ePacketIndex = 0; ePacketIndex < MAX_BUFFER_SIZE; ePacketIndex++) {
-				endPacketData[ePacketIndex] = 0;
+				endPacketData[ePacketIndex] = Byte.MIN_VALUE;
 			}
 			
 			DatagramPacket endPacket = new DatagramPacket(

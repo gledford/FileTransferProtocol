@@ -102,7 +102,7 @@ public class Server {
 			boolean endOfTransmission = false;
 			byte[] endPacket = new byte[MAX_BUFFER_SIZE];
 			for (int ePacketIndex = 0; ePacketIndex < MAX_BUFFER_SIZE; ePacketIndex++) {
-				endPacket[ePacketIndex] = 0;
+				endPacket[ePacketIndex] = Byte.MIN_VALUE;
 			}
 			DatagramSocket serverSocket = new DatagramSocket(portNumber);
 
@@ -114,25 +114,28 @@ public class Server {
 
 				DatagramPacket receivePacket = new DatagramPacket(
 						receivedMessages.get(currentIndex),
-						receivedMessages.get(0).length);
+						receivedMessages.get(currentIndex).length);
 
 				serverSocket.receive(receivePacket);
 
 				String packet = new String(receivedMessages.get(currentIndex));
 
-				if (Arrays
-						.equals(endPacket, receivedMessages.get(currentIndex)))
+				if (Arrays.equals(endPacket, receivedMessages.get(currentIndex))) {
+					receivedMessages.remove(currentIndex);
+					System.out.println("EOF");
 					endOfTransmission = true;
-
-				byte[] sendData = packet.toUpperCase().getBytes();
-
-				// Ack
-				DatagramPacket sendPacket = new DatagramPacket(sendData,
-						sendData.length, receivePacket.getAddress(),
-						receivePacket.getPort());
-
-				currentIndex++;
-				serverSocket.send(sendPacket);
+				}
+				else {
+					byte[] sendData = packet.toUpperCase().getBytes();
+	
+					// Ack
+					DatagramPacket sendPacket = new DatagramPacket(sendData,
+							sendData.length, receivePacket.getAddress(),
+							receivePacket.getPort());
+	
+					currentIndex++;
+					serverSocket.send(sendPacket);
+				}
 			}
 
 			serverSocket.close();
@@ -140,13 +143,33 @@ public class Server {
 			// Create file string
 			String fileString = "";
 			for (int index = 0; index < receivedMessages.size(); index++) {
+				// Remove extra bytes from last message
+				if (index == receivedMessages.size() - 1) {
+					System.out.println("Looking at last packet");
+					int indexOfEndOfFile = -1;
+					for (int index2 = 0; index2 < receivedMessages.get(index).length; index2++) {
+						if (receivedMessages.get(index)[index2] == Byte.MIN_VALUE) {
+							indexOfEndOfFile = index2;
+							System.out.println("Index of end of file found");
+						}
+					}
+					if (indexOfEndOfFile != -1) {
+						byte [] lastPacket = new byte[indexOfEndOfFile + 1];
+						for (int index3 = 0; index3 < indexOfEndOfFile; index3++) {
+							lastPacket[index3] = receivedMessages.get(index)[index3];
+						}
+						receivedMessages.remove(index);
+						receivedMessages.add(lastPacket);
+					}
+					
+				}
 				fileString = fileString
 						+ new String(receivedMessages.get(index));
 			}
 
 			// Write the received data to the file
 			PrintWriter out = new PrintWriter("received.txt");
-			out.println(fileString + "\n");
+			out.print(fileString);
 			out.close();
 
 		} catch (SocketException ex) {

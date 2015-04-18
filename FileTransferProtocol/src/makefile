@@ -1,13 +1,13 @@
 JFLAGS = -g
 JCC = javac
 
-default: client.class server.class 
+default: Client.class Server.class 
 
-client.class: client.java
-	$(JCC) $(JFLAGS) client.java
+Client.class: com/client/Client.java
+	$(JCC) $(JFLAGS) com/client/Client.java
 
-server.class: server.java
-	$(JCC) $(JFLAGS) server.java
+Server.class: com/server/Server.java
+	$(JCC) $(JFLAGS) com/server/Server.java
 
 clean: 
 	$(RM) *.class received.txt
