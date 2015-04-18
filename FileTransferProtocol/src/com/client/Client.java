@@ -2,6 +2,7 @@ package com.client;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -13,6 +14,19 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Client class that established a TCP connection with the server
+ * given the server address, port number, and file name. The TCP
+ * connection is established and the server replies with the port
+ * number to be used for the UDP file transfer. Once the port number
+ * is receive, the Client breaks the input file down into multiple
+ * byte arrays of a fixed size and sends a message and waits for a 
+ * reply before sending the next message. Once the file has been
+ * sent, an empty message is sent to terminate transmission.
+ * 
+ * @author gledford
+ *
+ */
 public class Client {
 	private static final int INIT_VALUE = 177;
 	private static final int MAX_BUFFER_SIZE = 4096;
@@ -20,7 +34,7 @@ public class Client {
 	public static void main(String[] args) throws IOException {
 		if (args.length == 3) {
 			String serverAddress = args[0];
-			int tcpPortNumber = Integer.parseInt(args[1]); //TODO verify port is valid
+			int tcpPortNumber = Integer.parseInt(args[1]);
 			String fileName = args[2];
 			
 			File f = new File(fileName);
@@ -39,8 +53,19 @@ public class Client {
 		System.exit(0);
 	}
 
+	/**
+	 * This function sends a TCP packet to the server with the INIT_VALUE,
+	 * then waits for the TCP packet reply with the port number to be used
+	 * in the next UDP connection.
+	 * 
+	 * @param serverAddress
+	 * @param tcpPortNumber
+	 * @return
+	 * @throws IOException
+	 */
 	private static int getPortNumberFromClient(String serverAddress, int tcpPortNumber)
 			throws IOException {
+		
 		int portNumber = 0;
 		Socket s = new Socket(serverAddress, tcpPortNumber);
 		PrintWriter out = new PrintWriter(s.getOutputStream(), true);
@@ -54,6 +79,17 @@ public class Client {
 		return portNumber;
 	}
 
+	/**
+	 * This function establishes a UDP connection and puts the file
+	 * into N packets of MAX_BUFFER_SIZE length. Each message is sent
+	 * and waits for a reply from the server. To finalize the connection,
+	 * an empty packet is sent.
+	 * 
+	 * @param portNumber
+	 * @param serverAddress
+	 * @param fileName
+	 * @throws IOException
+	 */
 	private static void sendFileToServer(int portNumber, String serverAddress, String fileName)
 			throws IOException {
 		if (portNumber != 0) {
@@ -61,9 +97,10 @@ public class Client {
 
 			InetAddress IPAddress = InetAddress.getByName(serverAddress);
 
-			InputStream fileInputStream = Client.class
-					.getResourceAsStream(fileName);
-
+			File f = new File(fileName);
+			InputStream fileInputStream = new FileInputStream(f);
+			
+			// Create a byte array of the entire file
 			byte[] file = new byte[fileInputStream.available()];
 			fileInputStream.read(file);
 			fileInputStream.close();
@@ -71,6 +108,7 @@ public class Client {
 			List<byte[]> messages = new ArrayList<byte[]>();
 			List<byte[]> acks = new ArrayList<byte[]>();
 
+			// Break the file down into byte arrays
 			int currentIndex = 0;
 			int k = 0;
 			for (int j = 0; j < file.length; j++) {
@@ -84,6 +122,7 @@ public class Client {
 				k++;
 			}
 
+			// Send each packet and wait for the reply before sending the next packet
 			int currentAckIndex = 0;
 			for (int messageId = 0; messageId < messages.size(); messageId++) {
 				DatagramPacket sendPacket = new DatagramPacket(
