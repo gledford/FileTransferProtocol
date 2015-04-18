@@ -1,6 +1,7 @@
 package com.client;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -13,23 +14,35 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Client {
-
 	private static final int INIT_VALUE = 177;
 	private static final int MAX_BUFFER_SIZE = 4096;
 
 	public static void main(String[] args) throws IOException {
-		String serverAddress = "localhost";
-		int udpPortNumber = getPortNumberFromClient(serverAddress);
-
-		sendFileToServer(udpPortNumber, serverAddress);
-
+		if (args.length == 3) {
+			String serverAddress = args[0];
+			int tcpPortNumber = Integer.parseInt(args[1]); //TODO verify port is valid
+			String fileName = args[2];
+			
+			File f = new File(fileName);
+			if(f.exists() && !f.isDirectory()) {
+				int udpPortNumber = getPortNumberFromClient(serverAddress, tcpPortNumber);
+				sendFileToServer(udpPortNumber, serverAddress, fileName);
+			}
+			else {
+				System.out.println("Invalid file " + fileName);
+			}
+		}
+		else {
+			System.out.println("Usage: java client <host1/server address> <n_port> <filename>");
+		}
+			
 		System.exit(0);
 	}
 
-	private static int getPortNumberFromClient(String serverAddress)
+	private static int getPortNumberFromClient(String serverAddress, int tcpPortNumber)
 			throws IOException {
 		int portNumber = 0;
-		Socket s = new Socket(serverAddress, 9090);
+		Socket s = new Socket(serverAddress, tcpPortNumber);
 		PrintWriter out = new PrintWriter(s.getOutputStream(), true);
 		out.println("" + INIT_VALUE);
 		BufferedReader input = new BufferedReader(new InputStreamReader(
@@ -41,7 +54,7 @@ public class Client {
 		return portNumber;
 	}
 
-	private static void sendFileToServer(int portNumber, String serverAddress)
+	private static void sendFileToServer(int portNumber, String serverAddress, String fileName)
 			throws IOException {
 		if (portNumber != 0) {
 			DatagramSocket clientSocket = new DatagramSocket();
@@ -49,7 +62,7 @@ public class Client {
 			InetAddress IPAddress = InetAddress.getByName(serverAddress);
 
 			InputStream fileInputStream = Client.class
-					.getResourceAsStream("testFile.txt");
+					.getResourceAsStream(fileName);
 
 			byte[] file = new byte[fileInputStream.available()];
 			fileInputStream.read(file);
