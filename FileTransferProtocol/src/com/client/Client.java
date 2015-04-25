@@ -29,7 +29,7 @@ import java.util.List;
  */
 public class Client {
 	private static final int INIT_VALUE = 177;
-	private static final int MAX_BUFFER_SIZE = 4096;
+	private static final int MAX_BUFFER_SIZE = 16;//4096;
 
 	public static void main(String[] args) throws IOException {
 		if (args.length == 3) {
@@ -70,11 +70,16 @@ public class Client {
 		Socket s = new Socket(serverAddress, tcpPortNumber);
 		PrintWriter out = new PrintWriter(s.getOutputStream(), true);
 		out.println("" + INIT_VALUE);
+		
+		System.out.println("Connected to " + s.getRemoteSocketAddress().toString());
+		
 		BufferedReader input = new BufferedReader(new InputStreamReader(
 				s.getInputStream()));
 		String portNumberString = input.readLine();
 		portNumber = Integer.parseInt(portNumberString);
 		s.close();
+
+		System.out.println("Server responds with random port: " + portNumber);
 
 		return portNumber;
 	}
@@ -150,7 +155,6 @@ public class Client {
 				clientSocket.receive(receivePacket);
 				
 				String sentence = new String(acks.get(currentAckIndex));
-				sentence = sentence.replace("\n", "").replace("\r", "");
 				System.out.println(sentence);
 				currentAckIndex++;
 			}

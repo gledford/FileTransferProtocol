@@ -29,7 +29,7 @@ public class Server {
 	private static final int MIN_PORT = 1024;
 	private static final int MAX_PORT = 65535;
 	private static final int INIT_VALUE = 177;
-	private static final int MAX_BUFFER_SIZE = 4096;
+	private static final int MAX_BUFFER_SIZE = 16;//4096;
 
 	public static void main(String[] args) throws IOException {
 		if (args.length == 1) {
@@ -54,6 +54,7 @@ public class Server {
 
 		boolean hasClientReceivedThePort = false;
 		int portNumber = 0;
+		boolean isPortOpen = false;
 		Random randomPortGenerator = new Random();
 
 		// TCP Connection to establish the UDP port number
@@ -66,16 +67,23 @@ public class Server {
 				String inputLine = input.readLine();
 				if (Integer.parseInt(inputLine) == INIT_VALUE) {
 					try {
-						portNumber = randomPortGenerator
-								.nextInt((MAX_PORT - MIN_PORT) + 1) + MIN_PORT;
+						while(!isPortOpen) {
+							portNumber = randomPortGenerator
+									.nextInt((MAX_PORT - MIN_PORT) + 1) + MIN_PORT;
+							try {
+								DatagramSocket testSocket = new DatagramSocket(portNumber);
+								testSocket.close();
+								isPortOpen = true;
+							} catch (SocketException ex) {}
+						}
 						PrintWriter out = new PrintWriter(
 								socket.getOutputStream(), true);
 						out.println(portNumber);
 					} finally {
 						socket.close();
-						System.out
-								.println("Negotiation detected. Selected random port "
-										+ portNumber + ".");
+						System.out.println("Negotiation detected: Client at "
+								+ socket.getInetAddress() + portNumber
+								+ " sent value " + INIT_VALUE);
 						hasClientReceivedThePort = true;
 					}
 				}
@@ -120,15 +128,14 @@ public class Server {
 
 				String packet = new String(receivedMessages.get(currentIndex));
 
-				if (Arrays.equals(endPacket, receivedMessages.get(currentIndex))) {
+				if (Arrays
+						.equals(endPacket, receivedMessages.get(currentIndex))) {
 					receivedMessages.remove(currentIndex);
 					endOfTransmission = true;
-				}
-				else {
+				} else {
 					byte[] sendData = receivedMessages.get(currentIndex);
 					if (sendData[sendData.length - 1] == 0) {
 						int eofIndex = -1;
-						System.out.println(Byte.MIN_VALUE);
 						for (int q = 0; q < sendData.length; q++) {
 							if (sendData[q] == Byte.MIN_VALUE) {
 								eofIndex = q;
@@ -143,15 +150,15 @@ public class Server {
 							sendData = newSendData;
 						}
 					}
-	
+
 					String str = new String(sendData, "UTF-8");
 					sendData = str.toUpperCase().getBytes();
-					
+
 					// Ack
 					DatagramPacket sendPacket = new DatagramPacket(sendData,
 							sendData.length, receivePacket.getAddress(),
 							receivePacket.getPort());
-	
+
 					currentIndex++;
 					serverSocket.send(sendPacket);
 				}
@@ -171,14 +178,14 @@ public class Server {
 						}
 					}
 					if (indexOfEndOfFile != -1) {
-						byte [] lastPacket = new byte[indexOfEndOfFile];
+						byte[] lastPacket = new byte[indexOfEndOfFile];
 						for (int index3 = 0; index3 < indexOfEndOfFile; index3++) {
 							lastPacket[index3] = receivedMessages.get(index)[index3];
 						}
 						receivedMessages.remove(index);
 						receivedMessages.add(lastPacket);
 					}
-					
+
 				}
 				fileString = fileString
 						+ new String(receivedMessages.get(index));
